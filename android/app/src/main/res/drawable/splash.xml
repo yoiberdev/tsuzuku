@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de arranque en Android 7 a 11: la placa de tinta con el ícono al centro. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/ic_launcher_background" />
+    <item android:drawable="@drawable/ic_launcher_foreground" android:gravity="center" android:width="180dp" android:height="180dp" />
+</layer-list>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tsuzuku</string>
+    <string name="title_activity_main">Tsuzuku</string>
+    <string name="package_name">dev.yoiber.tsuzuku</string>
+    <string name="custom_url_scheme">dev.yoiber.tsuzuku</string>
+</resources>

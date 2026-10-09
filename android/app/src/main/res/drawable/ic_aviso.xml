@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por scripts/icono.py -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <group android:translateX="1.707" android:translateY="20.072" android:scaleX="0.02092" android:scaleY="-0.02092">
+        <path android:fillColor="#FFFFFF" android:pathData="M81 262Q164 258 251 258Q517 258 633 302Q708 330 708 414Q708 456 664.0 484.5Q620 513 518 513Q430 513 305.0 495.5Q180 478 66 443L14 665Q187 699 309.5 713.0Q432 727 537 727Q745 727 857.5 652.0Q970 577 970 418Q970 318 930.0 237.0Q890 156 804 110Q710 59 557.5 39.0Q405 19 188 16Q179 79 156.0 137.5Q133 196 81 262Z" />
+    </group>
+</vector>
