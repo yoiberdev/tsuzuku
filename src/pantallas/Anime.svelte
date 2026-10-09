@@ -7,14 +7,18 @@
   import { nativa } from '../lib/avisos'
   import { ajustes, pestaña, volver } from '../lib/estado.svelte'
   import { cuando, emision, falta, fecha, formato, fuente, genero, horaDe, otroTitulo, relacion, temporadaNombre, titulo } from '../lib/formato'
-  import { puedeTraducir, sinopsis, traducir } from '../lib/texto'
+  import { puedeTraducir, sinopsis, sinopsisEnEspañol, traducir } from '../lib/texto'
   import type { Detalle, Enlace } from '../lib/tipos'
 
   let { id }: { id: number } = $props()
 
   let a = $state.raw<Detalle | null>(null)
   let error = $state('')
-  let traduccion = $state.raw<string[] | null>(null)
+  // La sinopsis en español: la del servicio de traducción o, si no hay, la del traductor del
+  // navegador. `original` es si elegiste ver el inglés.
+  let traduccion = $state.raw<{ parrafos: string[]; por: 'servicio' | 'navegador' } | null>(null)
+  let buscandoEs = $state(false)
+  let original = $state(false)
   let traduciendo = $state(false)
   let errorTraduccion = $state('')
   let trailer = $state(false)
@@ -43,6 +47,17 @@
   })
 
   const texto = $derived(sinopsis(a?.description ?? null))
+
+  $effect(() => {
+    if (!a?.description || !ajustes.sinopsisEs) return
+    const cual = a.id
+    buscandoEs = true
+    sinopsisEnEspañol(cual)
+      .then((d) => {
+        if (d && a?.id === cual && !traduccion) traduccion = { parrafos: d.parrafos, por: 'servicio' }
+      })
+      .finally(() => (buscandoEs = false))
+  })
 
   // Una sola entrada por plataforma; si la misma está en varios idiomas, se dice cuál es cuál.
   const plataformas = $derived.by(() => {
@@ -74,7 +89,8 @@
     traduciendo = true
     errorTraduccion = ''
     try {
-      traduccion = await traducir(texto.parrafos)
+      traduccion = { parrafos: await traducir(texto.parrafos), por: 'navegador' }
+      original = false
     } catch (e) {
       errorTraduccion = (e as Error).message
     } finally {
@@ -205,17 +221,33 @@
       {/if}
 
       {#if texto.parrafos.length}
+        {@const enEspañol = !!traduccion && !original}
+        {@const deAniList = `AniList${texto.fuente ? `, que la toma de ${texto.fuente}` : ''}`}
         <section class="seccion sinopsis">
-          <h2>Sinopsis {#if !traduccion}<small>en inglés</small>{/if}</h2>
-          {#each traduccion ?? texto.parrafos as p, i (i)}<p>{p}</p>{/each}
-          <p class="credito">
-            {traduccion ? 'Traducida por tu navegador. ' : ''}De AniList{texto.fuente ? `, que la toma de ${texto.fuente}` : ''}.
-            {#if puedeTraducir() && !traduccion}
-              <button class="enlace" onclick={pasarAEspañol} disabled={traduciendo}>{traduciendo ? 'Traduciendo…' : 'Traducir al español'}</button>
-            {:else if traduccion}
-              <button class="enlace" onclick={() => (traduccion = null)}>Ver el original</button>
-            {/if}
-          </p>
+          <h2>Sinopsis {#if !enEspañol && !buscandoEs}<small>en inglés</small>{/if}</h2>
+          {#if buscandoEs && !traduccion}
+            <div class="lineas" aria-busy="true" aria-label="Traduciendo la sinopsis">
+              <i></i><i></i><i></i><i></i>
+            </div>
+          {:else}
+            {#each enEspañol && traduccion ? traduccion.parrafos : texto.parrafos as p, i (i)}<p>{p}</p>{/each}
+            <p class="credito">
+              {#if enEspañol && traduccion?.por === 'servicio'}
+                Traducción automática de Google. El original, en inglés, es de {deAniList}.
+              {:else if enEspañol}
+                Traducida por tu navegador. El original, en inglés, es de {deAniList}.
+              {:else}
+                De {deAniList}.
+              {/if}
+              {#if enEspañol}
+                <button class="enlace" onclick={() => (original = true)}>Ver el original</button>
+              {:else if traduccion}
+                <button class="enlace" onclick={() => (original = false)}>Ver en español</button>
+              {:else if puedeTraducir()}
+                <button class="enlace" onclick={pasarAEspañol} disabled={traduciendo}>{traduciendo ? 'Traduciendo…' : 'Traducir al español'}</button>
+              {/if}
+            </p>
+          {/if}
           {#if errorTraduccion}<p class="credito">{errorTraduccion}</p>{/if}
         </section>
       {/if}
@@ -571,6 +603,22 @@
     margin-bottom: 12px;
     font-size: 16px;
     line-height: 1.6;
+  }
+
+  .lineas {
+    display: grid;
+    gap: 10px;
+    max-width: 68ch;
+  }
+
+  .lineas i {
+    height: 14px;
+    background: var(--papel-2);
+    animation: latido 1.2s ease-in-out infinite alternate;
+  }
+
+  .lineas i:last-child {
+    width: 60%;
   }
 
   .sinopsis .credito {

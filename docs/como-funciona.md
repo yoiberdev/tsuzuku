@@ -75,9 +75,9 @@ meses («Otoño 2026 · oct · nov · dic»).
 ## La ficha
 
 La sinopsis de AniList viene en inglés y con algo de HTML (`<br>`, `<i>`), marcas de spoiler
-(`~!…!~`) y a veces la fuente al final. `src/lib/texto.ts` la pasa a párrafos de texto plano, así que
-nada de lo que viene de AniList se inserta como HTML. Donde el navegador trae su propio traductor
-(la API `Translator` de Chrome, que traduce en el dispositivo), aparece «Traducir al español».
+(`~!…!~`) y a veces la fuente al final. `src/lib/sinopsis.js` la pasa a párrafos de texto plano, así
+que nada de lo que viene de AniList se inserta como HTML. La traducción al español la explica la
+sección siguiente.
 
 Las plataformas son los `externalLinks` de tipo `STREAMING` que AniList no marca como deshabilitados,
 una por plataforma e idioma. Lo que hay en cada una cambia según el país, así que debajo va un
@@ -85,6 +85,35 @@ enlace a JustWatch con el país que sale del idioma del navegador o, si no lo di
 
 El tráiler, en la web, se carga recién al tocarlo (una miniatura y después el reproductor de
 `youtube-nocookie.com`). En la app se abre en YouTube.
+
+## La sinopsis en español
+
+AniList no tiene sinopsis en español, así que las traduce Google Cloud Translation. La clave de
+Google no puede ir en la app (cualquiera podría sacarla del APK o de la web y gastarla), por eso la
+traducción pasa por un servicio propio, `servidor/index.mjs`: Node 22 sin dependencias, en su propio
+contenedor, detrás del nginx de la web en `/api/`.
+
+El servicio recibe solo el id del anime (`GET /api/sinopsis/195516`). La sinopsis la trae él mismo de
+AniList, la limpia con el mismo `sinopsis.js` que usa la app y manda los párrafos a Google. Así nadie
+puede usarlo para traducir otros textos con la clave.
+
+Cada sinopsis se traduce una vez y queda en un JSON por anime. De los que siguen emitiéndose, el
+servicio vuelve a mirar el original de AniList cada semana y solo traduce otra vez si cambió; de los
+terminados, la traducción queda para siempre. Si AniList no responde, sirve la copia que tenga.
+
+Google da 500.000 caracteres gratis al mes y una sinopsis tiene unos 700 a 1.000. El servicio lleva la
+cuenta en `uso.json` y, al llegar al tope (`TOPE_CARACTERES_MES`, 450.000 por defecto), deja de
+traducir hasta el mes siguiente. Además, cada IP puede pedir 60 traducciones nuevas por hora; lo ya
+traducido no cuenta. La IP real la pone Nginx Proxy Manager en `X-Real-IP` y el nginx de la web la
+pasa tal cual.
+
+En la app, `sinopsisEnEspañol()` pide la traducción y la guarda un mes en el dispositivo. Desde la
+web la ruta es relativa; desde el APK, cuyo origen es `https://localhost`, va a
+`https://anime.yoiber.dev/api`, y el servicio solo responde CORS a ese origen y al de desarrollo.
+Mientras llega la traducción se ven unas líneas de carga; si no llega (sin conexión, sin clave o con
+el cupo del mes gastado), queda el inglés. En Chrome de escritorio, que trae su propio traductor (la
+API `Translator`, que traduce en el dispositivo), aparece además «Traducir al español». En Ajustes se
+puede apagar la traducción.
 
 ## Navegación
 

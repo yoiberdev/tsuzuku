@@ -1,45 +1,47 @@
-// La sinopsis de AniList viene en inglés y con algo de HTML (<br>, <i>), marcas de spoiler
-// (~!…!~) y a veces la fuente al final, "(Source: Crunchyroll)". Aquí se pasa a párrafos de texto
-// plano: nada se inserta como HTML.
+// La sinopsis: limpiarla (sinopsis.js, compartido con el servidor) y conseguirla en español.
 
-const ENTIDADES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', mdash: '—', ndash: '–', hellip: '…', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“' }
+export { sinopsis } from './sinopsis.js'
 
-function decodificar(s: string) {
-  return s.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e: string) => {
-    if (e[0] === '#') {
-      const n = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)
-      return Number.isFinite(n) ? String.fromCodePoint(n) : m
+export interface Traducida {
+  parrafos: string[]
+  fuente: string
+}
+
+// El servicio de traducción vive junto a la web, en anime.yoiber.dev/api. Desde la propia web se
+// llama con una ruta relativa; desde el APK (o en desarrollo), con la dirección completa.
+const API = location.hostname === 'anime.yoiber.dev' ? '' : 'https://anime.yoiber.dev'
+const PREFIJO = 'tsuzuku.es.'
+const VIGENCIA = 30 * 86400e3
+
+/**
+ * La sinopsis traducida al español por el servidor, o null si no se puede (sin conexión, sin clave
+ * de traducción o con el cupo del mes gastado). Se guarda en el dispositivo un mes.
+ */
+export async function sinopsisEnEspañol(id: number): Promise<Traducida | null> {
+  try {
+    const g = JSON.parse(localStorage.getItem(PREFIJO + id) ?? 'null') as { t: number; d: Traducida } | null
+    if (g && Date.now() - g.t < VIGENCIA) return g.d
+  } catch {
+    // Se pide de nuevo.
+  }
+  try {
+    const res = await fetch(`${API}/api/sinopsis/${id}`, { signal: AbortSignal.timeout(12000) })
+    if (!res.ok) return null
+    const d = (await res.json()) as Traducida
+    if (!d.parrafos?.length) return null
+    try {
+      localStorage.setItem(PREFIJO + id, JSON.stringify({ t: Date.now(), d }))
+    } catch {
+      // Sin espacio se queda sin guardar.
     }
-    return ENTIDADES[e.toLowerCase()] ?? m
-  })
+    return d
+  } catch {
+    return null
+  }
 }
 
-export function sinopsis(descripcion: string | null): { parrafos: string[]; fuente: string } {
-  if (!descripcion) return { parrafos: [], fuente: '' }
-  let t = descripcion
-    .replace(/~!([\s\S]*?)!~/g, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-  t = decodificar(t)
-  let fuente = ''
-  t = t.replace(/\(\s*(?:Source|Fuente)\s*:\s*([^)]+)\)\s*$/i, (_, f: string) => {
-    fuente = f.trim()
-    return ''
-  })
-  t = t.replace(/\[Written by MAL Rewrite\]\s*$/i, () => {
-    fuente = 'MAL Rewrite'
-    return ''
-  })
-  const parrafos = t
-    .split(/\n\s*\n|\n/)
-    .map((p) => p.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-  return { parrafos, fuente }
-}
-
-// Chrome trae un traductor en el propio navegador (sin mandar el texto a ningún servidor). Donde
-// existe, la sinopsis se puede pasar al español; donde no, se queda en inglés.
+// Chrome trae un traductor en el propio navegador (sin mandar el texto a ningún servidor). Queda
+// como respaldo para cuando el servicio no puede traducir.
 interface Traductor {
   translate(texto: string): Promise<string>
 }

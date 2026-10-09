@@ -34,8 +34,9 @@ filtros de formato y género. Se puede ir a temporadas pasadas o a la siguiente.
 más se está viendo.
 
 La ficha de cada anime tiene sus datos, la cuenta regresiva al próximo episodio, las plataformas
-donde está, el tráiler, la sinopsis, los personajes con sus voces, lo relacionado (precuelas,
-secuelas) y recomendaciones.
+donde está, el tráiler, la sinopsis en español, los personajes con sus voces, lo relacionado
+(precuelas, secuelas) y recomendaciones. AniList solo tiene las sinopsis en inglés: las traduce
+Google, una sola vez por anime, en el servidor de Tsuzuku.
 
 En Android, Tsuzuku te avisa cuando se emite un episodio de lo que estás viendo, y al tocar el aviso
 abre la ficha. Los avisos se programan en el teléfono con las fechas que publica AniList, sin
@@ -52,7 +53,8 @@ con tu usuario (si es pública) y guardas o abres un respaldo.
 
 Svelte 5 y TypeScript sobre Vite, y Capacitor 8 para el APK (con sus plugins de avisos locales,
 archivos y compartir). Los datos salen de la [API GraphQL de AniList](https://docs.anilist.co), que
-es pública y no pide clave. No hay servidor propio: la lista se guarda en el dispositivo.
+es pública y no pide clave. La lista se guarda en el dispositivo; lo único que corre en un servidor
+propio es el servicio que traduce las sinopsis (`servidor/`, Node sin dependencias).
 
 | Archivo | Para qué |
 | --- | --- |
@@ -63,6 +65,7 @@ es pública y no pide clave. No hay servidor propio: la lista se guarda en el di
 | `src/lib/formato.ts` | Géneros, formatos y temporadas en español; fechas, horas y cuentas regresivas. |
 | `src/lib/texto.ts` | Limpiar la sinopsis y traducirla con el traductor del navegador, donde lo hay. |
 | `src/pantallas/` | Mi lista, Calendario, Temporada, Buscar, la ficha y Ajustes. |
+| `servidor/index.mjs` | El servicio de traducción: trae la sinopsis de AniList, la traduce con Google una vez y la guarda. |
 | `scripts/fuente.py` | Recorta la fuente de los títulos a lo que usa la app (28 KB en vez de casi un mega). |
 | `scripts/icono.py` | Dibuja el ícono de la web y los de Android a partir de la misma fuente. |
 
@@ -97,9 +100,11 @@ El APK queda en `android/app/build/outputs/apk/debug/app-debug.apk`. Funciona de
 
 ## Publicar la web
 
-El `Dockerfile` compila con Node y sirve el resultado con nginx. `nginx.conf` pone caché larga a
-`/assets/`, revalida siempre el HTML y tiene una política de contenido que solo deja salir a AniList,
-a las miniaturas de YouTube y a su reproductor de tráileres.
+Son dos contenedores. El de la web (`Dockerfile`) compila con Node y sirve el resultado con nginx:
+caché larga para `/assets/`, el HTML siempre revalidado y una política de contenido que solo deja
+salir a AniList, a las miniaturas de YouTube y a su reproductor de tráileres. Ese nginx pasa
+`/api/` al del servicio de traducción (`servidor/Dockerfile`), que necesita la clave de Google en un
+`.env` (ver `.env.example`). Sin clave, la app muestra las sinopsis en inglés.
 
 ## In English
 
@@ -107,4 +112,6 @@ Tsuzuku is an anime tracker for the web and Android, built with Svelte 5, TypeSc
 on top of the public AniList GraphQL API. It keeps your watch list with per-episode progress, shows
 the current season and a weekly airing schedule in your local time, links each show to the legal
 streaming platforms that carry it, and schedules local Android notifications when a new episode
-airs. There is no backend: the list lives on the device. The app and docs are in Spanish.
+airs. The list lives on the device; the only backend is a small Node service that translates
+synopses to Spanish with Google Translate once per show and caches them. The app and docs are in
+Spanish.

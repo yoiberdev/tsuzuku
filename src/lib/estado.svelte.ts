@@ -9,10 +9,11 @@ const CLAVE = 'tsuzuku.ajustes'
 interface Ajustes {
   idioma: Idioma
   avisos: boolean
+  sinopsisEs: boolean
 }
 
 function cargar(): Ajustes {
-  const base: Ajustes = { idioma: 'romaji', avisos: true }
+  const base: Ajustes = { idioma: 'romaji', avisos: true, sinopsisEs: true }
   try {
     return { ...base, ...JSON.parse(localStorage.getItem(CLAVE) ?? '{}') }
   } catch {

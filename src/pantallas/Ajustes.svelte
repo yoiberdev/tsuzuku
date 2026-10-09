@@ -109,6 +109,15 @@
   </section>
 
   <section class="seccion">
+    <h2>Sinopsis</h2>
+    <button class="interruptor" role="switch" aria-checked={ajustes.sinopsisEs} onclick={() => ((ajustes.sinopsisEs = !ajustes.sinopsisEs), guardarAjustes())}>
+      <span>Mostrarla en español, con traducción automática de Google</span>
+      <i></i>
+    </button>
+    <p class="nota">AniList solo tiene las sinopsis en inglés. Cada una se traduce una vez en el servidor de Tsuzuku, que solo recibe el número del anime.</p>
+  </section>
+
+  <section class="seccion">
     <h2>Avisos de estreno</h2>
     {#if nativa}
       <button class="interruptor" role="switch" aria-checked={ajustes.avisos && permiso === 'granted'} onclick={cambiarAvisos}>
